@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect } from "react";
@@ -33,13 +33,15 @@ export default function MapView({ sites = [] }: MapViewProps) {
     <MapContainer
       center={[51.505, -0.09]}
       zoom={13}
-      scrollWheelZoom={false}
-      className="h-[500px] w-full rounded-lg z-0"
+      scrollWheelZoom={true}
+      zoomControl={false}
+      className="h-full w-full z-0"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <ZoomControl position="bottomright" />
       {sites.map((site) => (
         <Marker key={site.id} position={[site.location.lat, site.location.lng]}>
           <Popup>
