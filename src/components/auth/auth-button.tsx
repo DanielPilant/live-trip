@@ -1,7 +1,6 @@
-import Link from "next/link";
-import { Button } from "../ui/button";
 import { getUser } from "@/lib/services/auth-service";
 import { LogoutButton } from "./logout-button";
+import { LoginModal } from "./login-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "../ui/button";
 
 export async function AuthButton() {
   const user = await getUser();
@@ -48,11 +48,7 @@ export async function AuthButton() {
       </DropdownMenuContent>
     </DropdownMenu>
   ) : (
-    <Button
-      asChild
-      className="bg-white text-black hover:bg-gray-50 shadow-md hover:shadow-lg rounded-full px-6 font-medium border border-gray-200 transition-all"
-    >
-      <Link href="/auth/login">Sign in</Link>
-    </Button>
+    <LoginModal />
   );
 }
+
