@@ -111,3 +111,8 @@
   color: #9ca3af !important;
   cursor: not-allowed !important;
 }
+
+/* Hide Leaflet Attribution */
+.leaflet-control-attribution {
+  display: none !important;
+}

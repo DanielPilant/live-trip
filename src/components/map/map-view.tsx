@@ -35,6 +35,7 @@ export default function MapView({ sites = [] }: MapViewProps) {
       zoom={13}
       scrollWheelZoom={true}
       zoomControl={false}
+      attributionControl={false}
       className="h-full w-full z-0"
     >
       <TileLayer

@@ -1,4 +1,7 @@
 {
+  "name": "live-trip",
+  "version": "0.1.0",
+  "description": "Real-time crowd monitoring application",
   "private": true,
   "scripts": {
     "dev": "next dev",
