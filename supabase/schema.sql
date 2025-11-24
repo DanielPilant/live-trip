@@ -31,3 +31,13 @@ create policy "Public reports are viewable by everyone" on reports
 
 create policy "Authenticated users can insert reports" on reports
   for insert with check (auth.uid() = user_id);
+
+-- -- Seed Data (JCT - Machon Lev)
+-- INSERT INTO sites (name, description, location, crowd_level)
+-- VALUES (
+--   'JCT - Machon Lev',
+--   'Jerusalem College of Technology main campus',
+--   '{"lat": 31.7658, "lng": 35.1911}',
+--   'low'
+-- );
+

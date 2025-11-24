@@ -31,8 +31,8 @@ export default function MapView({ sites = [] }: MapViewProps) {
 
   return (
     <MapContainer
-      center={[51.505, -0.09]}
-      zoom={13}
+      center={[31.7658, 35.1911]}
+      zoom={15}
       scrollWheelZoom={true}
       zoomControl={false}
       attributionControl={false}
