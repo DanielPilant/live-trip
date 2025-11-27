@@ -25,11 +25,11 @@ export default async function Home() {
 
       {/* Bottom Left Logo Button */}
       <div className="absolute bottom-8 left-4 z-10">
-        <button className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors">
+        <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors">
           <Logo className="h-8 w-8" />
+          <span className="font-bold text-lg">Live Trip</span>
         </button>
       </div>
     </main>
   );
 }
-
