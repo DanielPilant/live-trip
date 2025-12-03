@@ -12,7 +12,9 @@ import L from "leaflet";
 import { Site, Report } from "@/lib/types";
 import { ReportForm } from "@/components/report/report-form";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { MapController } from "./map-controller";
+
 // Fix for default marker icon missing in Leaflet with Webpack/Next.js
 const iconRetinaUrl =
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png";
@@ -31,24 +33,43 @@ interface MapViewProps {
 
 export default function MapView({
   sites = [],
-  selectedSite: controlledSelectedSite = null,
-
+  selectedSite = null,
+  reports = [],
+  flyToLocation = null,
+  onSiteSelect,
 }: MapViewProps) {
-  // Local state from your branch
-  const [selectedSite, setSelectedSite] = useState<Site | null>(
-    controlledSelectedSite
-  );
   const [userReport, setUserReport] = useState<Report | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
 
-  // Map-related refs & icons from main
+  const pinIcon = useMemo(
+    () =>
+      L.icon({
+        iconUrl,
+        iconRetinaUrl,
+        shadowUrl,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+      }),
+    []
+  );
 
-
+  const dotIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: "bg-blue-500 border-2 border-white rounded-full shadow-md",
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+        popupAnchor: [0, -6],
+      }),
+    []
+  );
 
   useEffect(() => {
-    // remove internal reference safely without using `any`
-    const proto = L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown };
-    delete proto._getIconUrl;
+    // @ts-expect-error - Leaflet icon fix
+    delete L.Icon.Default.prototype._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl,
       iconUrl,
@@ -56,36 +77,49 @@ export default function MapView({
     });
   }, []);
 
-  const handleMarkerClick = async (site: Site) => {
-    setSelectedSite(site);
-    setShowForm(false); // Reset form visibility
-
-    // Fetch user's report for this site
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+  // Fetch user's report when selectedSite changes
+  useEffect(() => {
+    async function fetchUserReport() {
+      if (!selectedSite) {
         setUserReport(null);
         return;
       }
 
-      const { data, error } = await supabase
-        .from("reports")
-        .select("*")
-        .eq("site_id", site.id)
-        .eq("user_id", user.id)
-        .single();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!error && data) {
-        setUserReport(data as Report);
-      } else {
+        if (!user) {
+          setUserReport(null);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("reports")
+          .select("*")
+          .eq("site_id", selectedSite.id)
+          .eq("user_id", user.id)
+          .single();
+
+        if (!error && data) {
+          setUserReport(data as Report);
+        } else {
+          setUserReport(null);
+        }
+      } catch (err) {
+        console.error("Error fetching user report:", err);
         setUserReport(null);
       }
-    } catch (err) {
-      console.error("Error fetching user report:", err);
-      setUserReport(null);
     }
+
+    fetchUserReport();
+  }, [selectedSite]);
+
+  const handleMarkerClick = (site: Site) => {
+    onSiteSelect?.(site);
+    setShowForm(false);
   };
 
   const handleShowForm = () => {
@@ -98,33 +132,49 @@ export default function MapView({
   };
 
   const handleFormSuccess = () => {
-    // Refresh the report after submit/update
     if (selectedSite) {
-      handleMarkerClick(selectedSite);
+      setShowForm(false);
     }
   };
+
+  // Combine sites with selectedSite if it's not in the list
+  const displaySites = useMemo(() => {
+    if (selectedSite && !sites.find((s) => s.id === selectedSite.id)) {
+      return [...sites, selectedSite];
+    }
+    return sites;
+  }, [sites, selectedSite]);
 
   return (
     <>
       <MapContainer
-        center={[31.7658, 35.1911]}
-        zoom={15}
+        center={[20, 0]}
+        zoom={2}
         scrollWheelZoom={true}
         zoomControl={false}
         attributionControl={false}
         className="h-full w-full z-0"
       >
+        <MapController
+          selectedSite={selectedSite}
+          flyToLocation={flyToLocation}
+        />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <ZoomControl position="bottomright" />
-        {sites.map((site) => (
+
+        {displaySites.map((site) => (
           <Marker
             key={site.id}
             position={[site.location.lat, site.location.lng]}
+            icon={selectedSite?.id === site.id ? pinIcon : dotIcon}
             eventHandlers={{
               click: () => handleMarkerClick(site),
+            }}
+            ref={(ref) => {
+              if (ref) markerRefs.current[site.id] = ref;
             }}
           >
             <Popup maxWidth={320} autoPan={true} autoPanPadding={[50, 50]}>
@@ -147,6 +197,25 @@ export default function MapView({
                   </span>
                 </div>
 
+                {/* Recent Reports List */}
+                {selectedSite?.id === site.id && reports.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-gray-100 mb-3">
+                    <p className="text-xs font-semibold mb-1">
+                      Recent Reports:
+                    </p>
+                    <div className="space-y-1 max-h-24 overflow-y-auto">
+                      {reports.map((report) => (
+                        <div
+                          key={report.id}
+                          className="text-xs text-gray-600 bg-gray-50 p-1 rounded"
+                        >
+                          {report.content}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Show button in popup */}
                 <div className="border-t pt-3 mt-3">
                   <button
@@ -160,6 +229,13 @@ export default function MapView({
             </Popup>
           </Marker>
         ))}
+
+        {flyToLocation && !selectedSite && (
+          <Marker
+            position={[flyToLocation.lat, flyToLocation.lng]}
+            icon={pinIcon}
+          />
+        )}
       </MapContainer>
 
       {/* Modal Form - Outside of Leaflet Popup */}
@@ -168,7 +244,9 @@ export default function MapView({
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-start mb-6 gap-4">
-                <h2 className="text-lg font-bold flex-1 text-gray-800">{selectedSite.name}</h2>
+                <h2 className="text-lg font-bold flex-1 text-gray-800">
+                  {selectedSite.name}
+                </h2>
                 <div className="flex flex-col items-end gap-2">
                   <button
                     onClick={() => setShowForm(false)}
