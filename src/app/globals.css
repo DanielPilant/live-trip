@@ -116,3 +116,18 @@
 .leaflet-control-attribution {
   display: none !important;
 }
+
+/* Custom Leaflet Popup Styling */
+.leaflet-popup-custom {
+  max-width: 320px !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+}

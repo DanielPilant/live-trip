@@ -37,7 +37,7 @@ export function LoginForm({
         {error && <p className="text-sm text-red-500 text-center">{error}</p>}
         <Button
           variant="outline"
-          className="w-full h-12 rounded-full border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all"
+          className="w-full h-12 rounded-full border-gray-300 hover:bg-white hover:border-gray-400 hover:text-black transition-all"
           onClick={handleGoogleLogin}
           disabled={isLoading}
         >
