@@ -74,7 +74,6 @@ export default function MapView({
   );
 
   useEffect(() => {
-    // @ts-expect-error - Leaflet icon fix
     delete (L.Icon.Default.prototype as any)._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl,
