@@ -5,7 +5,7 @@ export async function getSites() {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("sites")
+    .from("site_crowd_levels")
     .select("*")
     .order("name");
 
@@ -21,7 +21,7 @@ export async function getSiteById(id: string) {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("sites")
+    .from("site_crowd_levels")
     .select("*")
     .eq("id", id)
     .single();
@@ -51,6 +51,21 @@ export async function getReportsBySiteId(siteId: string) {
   return data as Report[];
 }
 
+export async function getUserReportForSite(siteId: string, userId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("site_id", siteId)
+    .eq("user_id", userId)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    console.error(`Error fetching user report for site ${siteId}:`, error);
+  }
+
+  return data as Report | null;
 export async function searchSites(query: string) {
   const supabase = await createClient();
 
