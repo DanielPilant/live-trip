@@ -55,7 +55,17 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
           });
         },
         (error) => {
-          console.error("Error getting location:", error);
+          if (error.code === 1) {
+            // User denied permission - this is expected behavior
+            console.log("User denied location access");
+            return;
+          }
+          console.error("Error getting location:", error.message);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
         }
       );
     }

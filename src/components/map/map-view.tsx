@@ -12,9 +12,7 @@ import L from "leaflet";
 import { Site, Report } from "@/lib/types";
 import { ReportForm } from "@/components/report/report-form";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useRef, useMemo, useState } from "react";
-import { MapController } from "./map-controller";
-
+import { useEffect, useState } from "react";
 // Fix for default marker icon missing in Leaflet with Webpack/Next.js
 const iconRetinaUrl =
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png";
@@ -34,9 +32,7 @@ interface MapViewProps {
 export default function MapView({
   sites = [],
   selectedSite: controlledSelectedSite = null,
-  reports = [],
-  flyToLocation = null,
-  onSiteSelect,
+
 }: MapViewProps) {
   // Local state from your branch
   const [selectedSite, setSelectedSite] = useState<Site | null>(
@@ -46,35 +42,13 @@ export default function MapView({
   const [showForm, setShowForm] = useState(false);
 
   // Map-related refs & icons from main
-  const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
 
-  const pinIcon = useMemo(
-    () =>
-      L.icon({
-        iconUrl,
-        iconRetinaUrl,
-        shadowUrl,
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41],
-      }),
-    []
-  );
 
-  const dotIcon = useMemo(
-    () =>
-      L.divIcon({
-        className: "bg-blue-500 border-2 border-white rounded-full shadow-md",
-        iconSize: [12, 12],
-        iconAnchor: [6, 6],
-        popupAnchor: [0, -6],
-      }),
-    []
-  );
 
   useEffect(() => {
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    // remove internal reference safely without using `any`
+    const proto = L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown };
+    delete proto._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl,
       iconUrl,
