@@ -1,12 +1,19 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  ZoomControl,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect, useState } from "react";
 import { Site, Report } from "@/lib/types";
 import { ReportForm } from "@/components/report/report-form";
 import { createClient } from "@/lib/supabase/client";
+import { useEffect, useRef, useMemo, useState } from "react";
+import { MapController } from "./map-controller";
 
 // Fix for default marker icon missing in Leaflet with Webpack/Next.js
 const iconRetinaUrl =
@@ -18,16 +25,57 @@ const shadowUrl =
 
 interface MapViewProps {
   sites?: Site[];
+  selectedSite?: Site | null;
+  reports?: Report[];
+  flyToLocation?: { lat: number; lng: number } | null;
+  onSiteSelect?: (site: Site) => void;
 }
 
-export default function MapView({ sites = [] }: MapViewProps) {
-  const [selectedSite, setSelectedSite] = useState<Site | null>(null);
+export default function MapView({
+  sites = [],
+  selectedSite: controlledSelectedSite = null,
+  reports = [],
+  flyToLocation = null,
+  onSiteSelect,
+}: MapViewProps) {
+  // Local state from your branch
+  const [selectedSite, setSelectedSite] = useState<Site | null>(
+    controlledSelectedSite
+  );
   const [userReport, setUserReport] = useState<Report | null>(null);
   const [showForm, setShowForm] = useState(false);
 
+  // Map-related refs & icons from main
+  const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
+
+  const pinIcon = useMemo(
+    () =>
+      L.icon({
+        iconUrl,
+        iconRetinaUrl,
+        shadowUrl,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+      }),
+    []
+  );
+
+  const dotIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: "bg-blue-500 border-2 border-white rounded-full shadow-md",
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+        popupAnchor: [0, -6],
+      }),
+    []
+  );
+
   useEffect(() => {
     // @ts-expect-error - Leaflet icon fix
-    delete L.Icon.Default.prototype._getIconUrl;
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl,
       iconUrl,

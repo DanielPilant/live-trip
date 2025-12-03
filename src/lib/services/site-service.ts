@@ -66,4 +66,20 @@ export async function getUserReportForSite(siteId: string, userId: string) {
   }
 
   return data as Report | null;
+export async function searchSites(query: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("sites")
+    .select("*")
+    .ilike("name", `${query}%`)
+    .order("name")
+    .limit(10);
+
+  if (error) {
+    console.error("Error searching sites:", error);
+    return [];
+  }
+
+  return data as Site[];
 }

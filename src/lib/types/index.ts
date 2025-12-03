@@ -33,3 +33,10 @@ export interface Trip {
   locations?: Location[];
   created_at: string;
 }
+
+export interface MapboxResult {
+  id: string;
+  text: string;
+  place_name: string;
+  center: [number, number]; // [lng, lat]
+}
