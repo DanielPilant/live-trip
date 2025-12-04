@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/command";
 import { Logo } from "@/components/ui/logo";
 import { Loader2 } from "lucide-react";
+import { ThemeSwitcher } from "@/components/common/theme-switcher";
 
 interface HomeViewProps {
   sites: Site[];
@@ -39,6 +40,7 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
   const [mapboxResults, setMapboxResults] = useState<MapboxResult[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Refs for debouncing and race condition handling
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -46,6 +48,7 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setMounted(true);
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -122,7 +125,12 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
     [selectedSite]
   );
 
-  const handleSelectSite = async (site: Site) => {
+  const handleSelectSite = async (site: Site | null) => {
+    if (!site) {
+      setSelectedSite(null);
+      setReports([]);
+      return;
+    }
     setSelectedSite(site);
     setFlyToLocation(null);
     setInputValue(site.name);
@@ -163,17 +171,18 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
       </div>
 
       {/* Search Bar */}
+      {mounted && (
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-md">
         <div className="relative">
           <Command
             shouldFilter={false}
-            className="rounded-2xl border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg transition-all duration-200 focus-within:shadow-xl focus-within:ring-2 focus-within:ring-gray-100 overflow-visible"
+            className="rounded-2xl border border-border bg-background/95 backdrop-blur-sm shadow-lg transition-all duration-200 focus-within:shadow-xl focus-within:ring-2 focus-within:ring-ring overflow-visible"
           >
             <div className="relative">
               <CommandInput
                 ref={inputRef}
                 placeholder="Search for a site..."
-                className="h-12 text-base text-gray-900 placeholder:text-gray-400 pr-10"
+                className="h-12 text-base text-foreground placeholder:text-muted-foreground pr-10"
                 value={inputValue}
                 onFocus={() => setOpen(true)}
                 onBlur={() => setTimeout(() => setOpen(false), 200)}
@@ -182,7 +191,7 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
               />
               {isLoading && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -190,9 +199,9 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
             {open &&
               inputValue.length > 0 &&
               (searchResults.length > 0 || mapboxResults.length > 0) && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 w-full mt-2 bg-popover rounded-xl shadow-2xl border border-border overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
                   <CommandList className="max-h-[300px] overflow-y-auto py-2">
-                    <CommandEmpty className="py-6 text-center text-sm text-gray-500">
+                    <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
                       No results found.
                     </CommandEmpty>
 
@@ -207,12 +216,12 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
                               e.preventDefault();
                               e.stopPropagation();
                             }}
-                            className="flex flex-col items-start px-4 py-3 mx-2 my-1 rounded-lg cursor-pointer transition-colors hover:bg-gray-100 aria-selected:bg-gray-100"
+                            className="flex flex-col items-start px-4 py-3 mx-2 my-1 rounded-lg cursor-pointer transition-colors hover:bg-accent aria-selected:bg-accent"
                           >
-                            <span className="font-semibold text-gray-900 text-sm">
+                            <span className="font-semibold text-foreground text-sm">
                               {site.name}
                             </span>
-                            <span className="text-xs text-gray-500 truncate w-full mt-0.5">
+                            <span className="text-xs text-muted-foreground truncate w-full mt-0.5">
                               {site.description}
                             </span>
                           </CommandItem>
@@ -231,12 +240,12 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
                               e.preventDefault();
                               e.stopPropagation();
                             }}
-                            className="flex flex-col items-start px-4 py-3 mx-2 my-1 rounded-lg cursor-pointer transition-colors hover:bg-gray-100 aria-selected:bg-gray-100"
+                            className="flex flex-col items-start px-4 py-3 mx-2 my-1 rounded-lg cursor-pointer transition-colors hover:bg-accent aria-selected:bg-accent"
                           >
-                            <span className="font-semibold text-gray-900 text-sm">
+                            <span className="font-semibold text-foreground text-sm">
                               {place.text}
                             </span>
-                            <span className="text-xs text-gray-500 truncate w-full mt-0.5">
+                            <span className="text-xs text-muted-foreground truncate w-full mt-0.5">
                               {place.place_name}
                             </span>
                           </CommandItem>
@@ -249,15 +258,21 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
           </Command>
         </div>
       </div>
+      )}
 
       {/* Top Right Auth Button */}
-      <div className="absolute top-4 right-4 z-10 flex gap-2">{authButton}</div>
+      <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
+        <div className="bg-background/90 backdrop-blur-sm rounded-full shadow-md border border-border">
+          <ThemeSwitcher />
+        </div>
+        {authButton}
+      </div>
 
       {/* Bottom Left Logo Button */}
       <div className="absolute bottom-8 left-4 z-10">
-        <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors">
+        <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-background shadow-md hover:bg-accent transition-colors border border-border">
           <Logo className="h-8 w-8" />
-          <span className="font-bold text-lg text-black">Live Trip</span>
+          <span className="font-bold text-lg text-foreground">Live Trip</span>
         </button>
       </div>
     </main>
