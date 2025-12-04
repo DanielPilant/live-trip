@@ -18,7 +18,7 @@ export function LoginModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-white text-black hover:bg-gray-50 shadow-md hover:shadow-lg rounded-full px-6 font-medium border border-gray-200 transition-all">
+        <Button className="bg-background text-foreground hover:bg-muted shadow-md hover:shadow-lg rounded-full px-6 font-medium border border-border transition-all">
           Sign in
         </Button>
       </DialogTrigger>

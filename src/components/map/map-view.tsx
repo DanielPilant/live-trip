@@ -114,7 +114,7 @@ export default function MapView({
   };
 
   return (
-    <div className="w-full h-full relative bg-gray-200 dark:bg-gray-800">
+    <div className="w-full h-full relative bg-muted">
       <Map
         ref={mapRef}
         {...viewState}
@@ -167,12 +167,12 @@ export default function MapView({
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${
                     selectedSite.crowd_level === "low"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                      ? "bg-green-500/15 text-green-700 dark:text-green-400"
                       : selectedSite.crowd_level === "moderate"
-                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                      ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
                       : selectedSite.crowd_level === "high"
-                      ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
-                      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                      ? "bg-orange-500/15 text-orange-700 dark:text-orange-400"
+                      : "bg-red-500/15 text-red-700 dark:text-red-400"
                   }`}
                 >
                   {selectedSite.crowd_level}

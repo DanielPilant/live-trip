@@ -116,33 +116,33 @@ export function ReportForm({ siteId, siteName, existingReport, onSuccess, onDele
   };
 
   const crowdLevelOptions: { value: CrowdLevel; label: string; color: string }[] = [
-    { value: "low", label: "Low", color: "bg-green-100 text-green-800" },
-    { value: "moderate", label: "Moderate", color: "bg-yellow-100 text-yellow-800" },
-    { value: "high", label: "High", color: "bg-orange-100 text-orange-800" },
-    { value: "critical", label: "Critical", color: "bg-red-100 text-red-800" },
+    { value: "low", label: "Low", color: "bg-green-500/15 text-green-700 dark:text-green-400" },
+    { value: "moderate", label: "Moderate", color: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400" },
+    { value: "high", label: "High", color: "bg-orange-500/15 text-orange-700 dark:text-orange-400" },
+    { value: "critical", label: "Critical", color: "bg-red-500/15 text-red-700 dark:text-red-400" },
   ];
 
   return (
     <>
       {/* Sign-in prompt modal */}
       {isAuthenticated === false && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-background rounded-lg shadow-lg max-w-md w-full border border-border">
             <div className="p-6">
-              <h2 className="text-lg font-bold text-gray-800 mb-2">Sign In Required</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="text-lg font-bold text-foreground mb-2">Sign In Required</h2>
+              <p className="text-muted-foreground mb-6">
                 Please sign in to submit crowd reports. Your reports help other users stay informed about current conditions at popular sites.
               </p>
               <div className="flex gap-3">
                 <a
                   href="/auth/login"
-                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded text-center font-medium hover:bg-blue-600 transition-colors"
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded text-center font-medium hover:bg-primary/90 transition-colors"
                 >
                   Sign In
                 </a>
                 <button
                   onClick={() => setIsAuthenticated(null)}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded text-center font-medium hover:bg-gray-300 transition-colors"
+                  className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded text-center font-medium hover:bg-secondary/80 transition-colors"
                 >
                   Cancel
                 </button>
@@ -154,13 +154,13 @@ export function ReportForm({ siteId, siteName, existingReport, onSuccess, onDele
 
       <div className="w-full">
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-800 rounded text-sm">
+          <div className="mb-4 p-3 bg-destructive/15 text-destructive rounded text-sm">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 p-3 bg-green-100 text-green-800 rounded text-sm">
+          <div className="mb-4 p-3 bg-green-500/15 text-green-700 dark:text-green-400 rounded text-sm">
             {existingReport ? "Report updated successfully!" : "Report submitted successfully!"}
           </div>
         )}
@@ -168,7 +168,7 @@ export function ReportForm({ siteId, siteName, existingReport, onSuccess, onDele
         <form onSubmit={handleSubmit} className="space-y-4">
         {/* Crowd Level Selection */}
         <div>
-          <label className="block text-sm font-medium mb-2 text-gray-800">Crowd Level</label>
+          <label className="block text-sm font-medium mb-2 text-foreground">Crowd Level</label>
           <div className="grid grid-cols-2 gap-2">
             {crowdLevelOptions.map((option) => (
               <button
@@ -177,8 +177,8 @@ export function ReportForm({ siteId, siteName, existingReport, onSuccess, onDele
                 onClick={() => setCrowdLevel(option.value)}
                 className={`p-2 rounded text-sm font-semibold transition-all ${
                   crowdLevel === option.value
-                    ? `${option.color} ring-2 ring-offset-1`
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    ? `${option.color} ring-2 ring-offset-1 ring-offset-background`
+                    : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 }`}
               >
                 {option.label}
@@ -189,16 +189,16 @@ export function ReportForm({ siteId, siteName, existingReport, onSuccess, onDele
 
         {/* Optional Notes */}
         <div>
-          <label className="block text-sm font-medium mb-2 text-gray-800">Notes (optional)</label>
+          <label className="block text-sm font-medium mb-2 text-foreground">Notes (optional)</label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Add any additional details..."
             maxLength={500}
-            className="w-full p-2 border rounded text-sm resize-none bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 border border-input rounded text-sm resize-none bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             rows={3}
           />
-          <p className="text-xs text-gray-500 mt-1">{content.length}/500</p>
+          <p className="text-xs text-muted-foreground mt-1">{content.length}/500</p>
         </div>
 
         {/* Submit Button */}

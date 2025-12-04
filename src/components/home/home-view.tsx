@@ -260,8 +260,11 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
       </div>
       )}
 
-      {/* Top Right Auth Button (ThemeSwitcher moved to `dark_light_mode`) */}
+      {/* Top Right Auth Button */}
       <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
+        <div className="bg-background/90 backdrop-blur-sm rounded-full shadow-md border border-border">
+          <ThemeSwitcher />
+        </div>
         {authButton}
       </div>
 
