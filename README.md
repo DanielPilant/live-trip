@@ -1,4 +1,4 @@
-# Live Trip 2025
+# Live Trip 
 
 A real-time crowd monitoring application built with Next.js, Supabase, and Leaflet. 
 
