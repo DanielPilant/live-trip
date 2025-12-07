@@ -6,7 +6,7 @@ import { ArrowLeft, Mail, User as UserIcon, MapPin, FileText } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
-import { getReportsAction } from "@/app/actions/site";
+import { createClient } from "@/lib/supabase/client";
 import { Report } from "@/lib/types";
 
 interface ProfileViewProps {
@@ -20,16 +20,33 @@ export function ProfileView({ user }: ProfileViewProps) {
   useEffect(() => {
     const fetchUserReports = async () => {
       try {
-        // Get all reports and filter by current user
-        // Note: You may want to create a dedicated endpoint for user reports
-        setIsLoading(false);
+        setIsLoading(true);
+        const supabase = createClient();
+
+        // Fetch all reports for this user
+        const { data, error } = await supabase
+          .from("reports")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching reports:", error);
+          setReports([]);
+        } else {
+          setReports(data || []);
+        }
       } catch (error) {
         console.error("Error fetching reports:", error);
+        setReports([]);
+      } finally {
         setIsLoading(false);
       }
     };
 
-    fetchUserReports();
+    if (user.id) {
+      fetchUserReports();
+    }
   }, [user.id]);
 
   const userMetadata = user.user_metadata || {};
@@ -41,11 +58,12 @@ export function ProfileView({ user }: ProfileViewProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
       {/* Header with Back Button */}
-      <div className="max-w-4xl mx-auto mb-8">
+      <div className="flex justify-between items-center max-w-4xl mx-auto mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
         <Link href="/">
-          <Button variant="ghost" className="gap-2 mb-6">
+          <Button variant="outline" className="gap-2">
             <ArrowLeft className="h-4 w-4" />
-            Return Home
+            Back to Home
           </Button>
         </Link>
       </div>
