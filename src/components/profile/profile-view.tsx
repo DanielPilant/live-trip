@@ -6,8 +6,8 @@ import { ArrowLeft, Mail, User as UserIcon, MapPin, FileText } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Report } from "@/lib/types";
+import { getUserReports, getUserStatistics } from "@/lib/services/profile-service";
 
 interface ProfileViewProps {
   user: User;
@@ -21,21 +21,9 @@ export function ProfileView({ user }: ProfileViewProps) {
     const fetchUserReports = async () => {
       try {
         setIsLoading(true);
-        const supabase = createClient();
-
-        // Fetch all reports for this user
-        const { data, error } = await supabase
-          .from("reports")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        if (error) {
-          console.error("Error fetching reports:", error);
-          setReports([]);
-        } else {
-          setReports(data || []);
-        }
+        // השתמש בProfileService במקום בSupabase ישירות
+        const reports = await getUserReports(user.id);
+        setReports(reports);
       } catch (error) {
         console.error("Error fetching reports:", error);
         setReports([]);
