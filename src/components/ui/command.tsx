@@ -19,6 +19,7 @@ const Command = React.forwardRef<
       className
     )}
     {...props}
+    id={undefined} // Fix for hydration mismatch
   />
 ));
 Command.displayName = CommandPrimitive.displayName;

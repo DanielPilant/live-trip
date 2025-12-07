@@ -1,35 +1,29 @@
 "use client";
 
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  ZoomControl,
-} from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import Map, { Marker, Popup, NavigationControl, MapRef } from "react-map-gl/maplibre";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { Site, Report } from "@/lib/types";
 import { ReportForm } from "@/components/report/report-form";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState, useRef, useMemo } from "react";
-import { MapController } from "./map-controller";
-
-// Fix for default marker icon missing in Leaflet with Webpack/Next.js
-const iconRetinaUrl =
-  "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png";
-const iconUrl =
-  "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png";
-const shadowUrl =
-  "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png";
+import { useTheme } from "next-themes";
+import { lightStyle, darkStyle } from "./map-styles";
 
 interface MapViewProps {
   sites?: Site[];
   selectedSite?: Site | null;
   reports?: Report[];
   flyToLocation?: { lat: number; lng: number } | null;
-  onSiteSelect?: (site: Site) => void;
+  onSiteSelect?: (site: Site | null) => void;
 }
+
+// JCT - Machon Lev coordinates
+const DEFAULT_CENTER = {
+  latitude: 31.7658,
+  longitude: 35.1911,
+  zoom: 16,
+};
 
 export default function MapView({
   sites = [],
@@ -38,44 +32,18 @@ export default function MapView({
   flyToLocation = null,
   onSiteSelect,
 }: MapViewProps) {
-  const [userReport, setUserReport] = useState<Report | null>(null);
+  const mapRef = useRef<MapRef>(null);
+  const { resolvedTheme } = useTheme();
+  const [userReport, setUserReport] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
+  
+  // View state for the map
+  const [viewState, setViewState] = useState(DEFAULT_CENTER);
 
-  const pinIcon = useMemo(
-    () =>
-      L.icon({
-        iconUrl,
-        iconRetinaUrl,
-        shadowUrl,
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41],
-      }),
-    []
-  );
+  const isDark = resolvedTheme === "dark";
+  const mapStyle = isDark ? darkStyle : lightStyle;
 
-  const dotIcon = useMemo(
-    () =>
-      L.divIcon({
-        className: "bg-blue-500 border-2 border-white rounded-full shadow-md",
-        iconSize: [12, 12],
-        iconAnchor: [6, 6],
-        popupAnchor: [0, -6],
-      }),
-    []
-  );
-
-  useEffect(() => {
-    // @ts-expect-error - Leaflet icon fix
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl,
-      iconUrl,
-      shadowUrl,
-    });
-  }, []);
+  console.log("MapView rendering, style:", mapStyle);
 
   // Fetch user's report when selectedSite changes
   useEffect(() => {
@@ -104,7 +72,7 @@ export default function MapView({
           .single();
 
         if (!error && data) {
-          setUserReport(data as Report);
+          setUserReport(data);
         } else {
           setUserReport(null);
         }
@@ -117,17 +85,20 @@ export default function MapView({
     fetchUserReport();
   }, [selectedSite]);
 
-  const handleMarkerClick = (site: Site) => {
-    onSiteSelect?.(site);
-    setShowForm(false);
-  };
+  // Handle flyToLocation
+  useEffect(() => {
+    if (flyToLocation && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [flyToLocation.lng, flyToLocation.lat],
+        zoom: 18,
+        duration: 2000,
+      });
+    }
+  }, [flyToLocation]);
 
-  const handleShowForm = () => {
-    setShowForm(true);
-  };
-
-  const handleDelete = () => {
-    setUserReport(null);
+  const handleMarkerClick = (e: any, site: Site) => {
+    e.originalEvent.stopPropagation();
+    if (onSiteSelect) onSiteSelect(site);
     setShowForm(false);
   };
 
@@ -137,137 +108,124 @@ export default function MapView({
     }
   };
 
-  // Combine sites with selectedSite if it's not in the list
-  const displaySites = useMemo(() => {
-    if (selectedSite && !sites.find((s) => s.id === selectedSite.id)) {
-      return [...sites, selectedSite];
-    }
-    return sites;
-  }, [sites, selectedSite]);
+  const handleDelete = () => {
+    setUserReport(null);
+    setShowForm(false);
+  };
 
   return (
-    <>
-      <MapContainer
-        center={[20, 0]}
-        zoom={2}
-        scrollWheelZoom={true}
-        zoomControl={false}
+    <div className="w-full h-full relative bg-muted">
+      <Map
+        ref={mapRef}
+        {...viewState}
+        onMove={evt => setViewState(evt.viewState)}
+        style={{ width: "100%", height: "100%" }}
+        mapStyle={mapStyle}
+        mapLib={maplibregl}
         attributionControl={false}
-        className="h-full w-full z-0"
       >
-        <MapController
-          selectedSite={selectedSite}
-          flyToLocation={flyToLocation}
-        />
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <ZoomControl position="bottomright" />
+        <NavigationControl position="bottom-right" />
 
-        {displaySites.map((site) => (
+        {sites.map((site) => (
           <Marker
             key={site.id}
-            position={[site.location.lat, site.location.lng]}
-            icon={selectedSite?.id === site.id ? pinIcon : dotIcon}
-            eventHandlers={{
-              click: () => handleMarkerClick(site),
-            }}
-            ref={(ref) => {
-              if (ref) markerRefs.current[site.id] = ref;
-            }}
+            latitude={site.location.lat}
+            longitude={site.location.lng}
+            anchor="bottom"
+            onClick={(e) => handleMarkerClick(e, site)}
           >
-            <Popup maxWidth={320} autoPan={true} autoPanPadding={[50, 50]}>
-              <div className="p-2">
-                <h3 className="font-bold text-lg mb-1">{site.name}</h3>
-                <p className="text-sm text-gray-600 mb-3">{site.description}</p>
-                <div className="mb-4">
-                  <span
-                    className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                      site.crowd_level === "low"
-                        ? "bg-green-100 text-green-800"
-                        : site.crowd_level === "moderate"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : site.crowd_level === "high"
-                        ? "bg-orange-100 text-orange-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    Crowd: {site.crowd_level.toUpperCase()}
-                  </span>
-                </div>
-
-                {/* Recent Reports List */}
-                {selectedSite?.id === site.id && reports.length > 0 && (
-                  <div className="mt-3 pt-2 border-t border-gray-100 mb-3">
-                    <p className="text-xs font-semibold mb-1">
-                      Recent Reports:
-                    </p>
-                    <div className="space-y-1 max-h-24 overflow-y-auto">
-                      {reports.map((report) => (
-                        <div
-                          key={report.id}
-                          className="text-xs text-gray-600 bg-gray-50 p-1 rounded"
-                        >
-                          {report.content}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Show button in popup */}
-                <div className="border-t pt-3 mt-3">
-                  <button
-                    onClick={handleShowForm}
-                    className="w-full px-4 py-2 bg-blue-500 text-white rounded text-sm font-medium hover:bg-blue-600 transition-colors"
-                  >
-                    {userReport ? "Update Report" : "Create Report"}
-                  </button>
-                </div>
-              </div>
-            </Popup>
+            <div className="cursor-pointer transform transition-transform hover:scale-110">
+              <img
+                src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png"
+                alt={site.name}
+                className="w-[25px] h-[41px]"
+                style={{ filter: isDark ? "invert(1) hue-rotate(180deg)" : "none" }}
+              />
+            </div>
           </Marker>
         ))}
 
-        {flyToLocation && !selectedSite && (
-          <Marker
-            position={[flyToLocation.lat, flyToLocation.lng]}
-            icon={pinIcon}
-          />
-        )}
-      </MapContainer>
+        {selectedSite && (
+          <Popup
+            latitude={selectedSite.location.lat}
+            longitude={selectedSite.location.lng}
+            anchor="top"
+            onClose={() => onSiteSelect && onSiteSelect(null)}
+            closeOnClick={true}
+            closeButton={false}
+            className="z-40"
+            maxWidth="300px"
+          >
+            <div className="p-2 min-w-[200px]">
+              <h3 className="font-bold text-lg mb-1">{selectedSite.name}</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                {selectedSite.description}
+              </p>
+              
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium">Crowd Level:</span>
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${
+                    selectedSite.crowd_level === "low"
+                      ? "bg-green-500/15 text-green-700 dark:text-green-400"
+                      : selectedSite.crowd_level === "moderate"
+                      ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
+                      : selectedSite.crowd_level === "high"
+                      ? "bg-orange-500/15 text-orange-700 dark:text-orange-400"
+                      : "bg-red-500/15 text-red-700 dark:text-red-400"
+                  }`}
+                >
+                  {selectedSite.crowd_level}
+                </span>
+              </div>
 
-      {/* Modal Form - Outside of Leaflet Popup */}
+              {/* Recent Reports List */}
+              {reports.length > 0 && (
+                <div className="mt-3 pt-2 border-t border-border mb-3">
+                  <p className="text-xs font-semibold mb-1">
+                    Recent Reports:
+                  </p>
+                  <div className="space-y-1 max-h-24 overflow-y-auto">
+                    {reports.map((report) => (
+                      <div
+                        key={report.id}
+                        className="text-xs text-muted-foreground bg-muted p-1 rounded"
+                      >
+                        {report.content}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t pt-3">
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  {userReport ? "Update Report" : "Report Status"}
+                </button>
+              </div>
+            </div>
+          </Popup>
+        )}
+      </Map>
+
+      {/* Modal Form Overlay */}
       {selectedSite && showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto border">
             <div className="p-6">
               <div className="flex justify-between items-start mb-6 gap-4">
-                <h2 className="text-lg font-bold flex-1 text-gray-800">
+                <h2 className="text-lg font-bold flex-1">
                   {selectedSite.name}
                 </h2>
-                <div className="flex flex-col items-end gap-2">
-                  <button
-                    onClick={() => setShowForm(false)}
-                    className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-                  >
-                    ×
-                  </button>
-                  <span
-                    className={`px-3 py-1 rounded text-xs font-semibold ${
-                      selectedSite.crowd_level === "low"
-                        ? "bg-green-100 text-green-800"
-                        : selectedSite.crowd_level === "moderate"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : selectedSite.crowd_level === "high"
-                        ? "bg-orange-100 text-orange-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {selectedSite.crowd_level.toUpperCase()}
-                  </span>
-                </div>
+                <button
+                  onClick={() => setShowForm(false)}
+                  className="text-muted-foreground hover:text-foreground text-2xl leading-none"
+                >
+                  ×
+                </button>
               </div>
               <ReportForm
                 siteId={selectedSite.id}
@@ -280,6 +238,6 @@ export default function MapView({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
