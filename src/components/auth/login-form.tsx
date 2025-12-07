@@ -34,10 +34,10 @@ export function LoginForm({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="flex flex-col gap-4">
-        {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+        {error && <p className="text-sm text-destructive text-center">{error}</p>}
         <Button
           variant="outline"
-          className="w-full h-12 rounded-full border-gray-300 hover:bg-white hover:border-gray-400 hover:text-black transition-all"
+          className="w-full h-12 rounded-full border-border hover:bg-accent hover:text-accent-foreground transition-all"
           onClick={handleGoogleLogin}
           disabled={isLoading}
         >
