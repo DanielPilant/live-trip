@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
+import { User } from "lucide-react";
+import Link from "next/link";
 
 export async function AuthButton() {
   const user = await getUser();
@@ -44,6 +46,13 @@ export async function AuthButton() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <Link href="/profile">
+          <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
+            <User className="h-4 w-4" />
+            <span>Profile</span>
+          </DropdownMenuItem>
+        </Link>
+        <DropdownMenuSeparator />
         <LogoutButton />
       </DropdownMenuContent>
     </DropdownMenu>
@@ -51,4 +60,6 @@ export async function AuthButton() {
     <LoginModal />
   );
 }
+
+
 
