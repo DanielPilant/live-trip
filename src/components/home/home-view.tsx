@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { User } from "@supabase/supabase-js";
 import { Site, Report, MapboxResult } from "@/lib/types";
 import MapView from "@/components/map";
+import { UserMenu } from "@/components/auth/user-menu";
+import { LoginModal } from "@/components/auth/login-modal";
 import {
   searchSitesAction,
   getReportsAction,
@@ -22,10 +25,10 @@ import { ThemeSwitcher } from "@/components/common/theme-switcher";
 
 interface HomeViewProps {
   sites: Site[];
-  authButton: React.ReactNode;
+  user: User | null;
 }
 
-export function HomeView({ sites, authButton }: HomeViewProps) {
+export function HomeView({ sites, user }: HomeViewProps) {
   // Map & Selection State
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
   const [flyToLocation, setFlyToLocation] = useState<{
@@ -265,7 +268,7 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
         <div className="bg-background/90 backdrop-blur-sm rounded-full shadow-md border border-border">
           <ThemeSwitcher />
         </div>
-        {authButton}
+        {mounted && (user ? <UserMenu user={user} /> : <LoginModal />)}
       </div>
 
       {/* Bottom Left Logo Button */}

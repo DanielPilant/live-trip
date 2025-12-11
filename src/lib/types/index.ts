@@ -11,6 +11,7 @@ export interface Site {
   description?: string;
   location: Location;
   crowd_level: CrowdLevel;
+  polygon?: any;
   created_at: string;
 }
 

@@ -1,12 +1,35 @@
 -- Create Sites Table
-create table sites (
-  id uuid default gen_random_uuid() primary key,
+-- create table sites (
+--   id uuid default gen_random_uuid() primary key,
+--   name text not null,
+--   description text,
+--   location jsonb not null, -- { "lat": number, "lng": number }
+--   crowd_level text check (crowd_level in ('low', 'moderate', 'high', 'critical')) default 'low',
+--   created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- );
+
+create table public.sites (
+  id uuid not null default gen_random_uuid (),
   name text not null,
-  description text,
-  location jsonb not null, -- { "lat": number, "lng": number }
-  crowd_level text check (crowd_level in ('low', 'moderate', 'high', 'critical')) default 'low',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+  description text null,
+  location jsonb not null,
+  crowd_level text null default 'low'::text,
+  created_at timestamp with time zone not null default timezone ('utc'::text, now()),
+  "Polygon" json null,
+  constraint sites_pkey primary key (id),
+  constraint sites_crowd_level_check check (
+    (
+      crowd_level = any (
+        array[
+          'low'::text,
+          'moderate'::text,
+          'high'::text,
+          'critical'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
 
 -- Create Reports Table
 create table reports (
@@ -50,6 +73,7 @@ select
   s.name,
   s.description,
   s.location,
+  s."Polygon" as polygon,
   coalesce(
     (
       select crowd_level

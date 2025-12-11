@@ -1,6 +1,6 @@
 "use client";
 
-import Map, { Marker, Popup, NavigationControl, MapRef } from "react-map-gl/maplibre";
+import Map, { Marker, Popup, NavigationControl, MapRef, Source, Layer } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Site, Report } from "@/lib/types";
@@ -17,6 +17,13 @@ interface MapViewProps {
   flyToLocation?: { lat: number; lng: number } | null;
   onSiteSelect?: (site: Site | null) => void;
 }
+
+const CROWD_LEVEL_COLORS = {
+  low: "#22c55e",
+  moderate: "#eab308",
+  high: "#f97316",
+  critical: "#ef4444",
+};
 
 // JCT - Machon Lev coordinates
 const DEFAULT_CENTER = {
@@ -42,6 +49,39 @@ export default function MapView({
 
   const isDark = resolvedTheme === "dark";
   const mapStyle = isDark ? darkStyle : lightStyle;
+
+  const sitesGeoJSON = useMemo(() => {
+    const features = sites
+      .filter((site) => site.polygon && site.polygon.elements && site.polygon.elements.length > 0)
+      .map((site) => {
+        const element = site.polygon.elements[0];
+        if (!element.geometry) return null;
+
+        const coordinates = element.geometry.map((p: any) => [p.lon, p.lat]);
+        // Ensure the polygon is closed
+        if (coordinates.length > 0 && (coordinates[0][0] !== coordinates[coordinates.length - 1][0] || coordinates[0][1] !== coordinates[coordinates.length - 1][1])) {
+            coordinates.push(coordinates[0]);
+        }
+
+        return {
+          type: "Feature",
+          geometry: {
+            type: "Polygon",
+            coordinates: [coordinates],
+          },
+          properties: {
+            id: site.id,
+            color: CROWD_LEVEL_COLORS[site.crowd_level] || "#888888",
+          },
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      type: "FeatureCollection",
+      features,
+    };
+  }, [sites]);
 
   console.log("MapView rendering, style:", mapStyle);
 
@@ -124,25 +164,46 @@ export default function MapView({
         mapLib={maplibregl}
         attributionControl={false}
       >
+        <Source id="sites-polygons" type="geojson" data={sitesGeoJSON as any}>
+          <Layer
+            id="sites-fill"
+            type="fill"
+            minzoom={13}
+            paint={{
+              "fill-color": ["get", "color"],
+              "fill-opacity": 0.3,
+            }}
+          />
+          <Layer
+            id="sites-outline"
+            type="line"
+            minzoom={15}
+            paint={{
+              "line-color": ["get", "color"],
+              "line-width": 2,
+            }}
+          />
+        </Source>
+
         <NavigationControl position="bottom-right" />
 
         {sites.map((site) => (
-          <Marker
+            <Marker
             key={site.id}
             latitude={site.location.lat}
             longitude={site.location.lng}
             anchor="bottom"
-            onClick={(e) => handleMarkerClick(e, site)}
-          >
+            onClick={(e: { originalEvent: MouseEvent }) => handleMarkerClick(e, site)}
+            >
             <div className="cursor-pointer transform transition-transform hover:scale-110">
               <img
-                src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png"
-                alt={site.name}
-                className="w-[25px] h-[41px]"
-                style={{ filter: isDark ? "invert(1) hue-rotate(180deg)" : "none" }}
+              src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png"
+              alt={site.name}
+              className="w-[25px] h-[41px]"
+              style={{ filter: isDark ? "invert(1) hue-rotate(180deg)" : "none" }}
               />
             </div>
-          </Marker>
+            </Marker>
         ))}
 
         {selectedSite && (

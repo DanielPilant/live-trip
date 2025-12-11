@@ -1,20 +1,22 @@
-import { getUser } from "@/lib/services/auth-service";
-import { LogoutButton } from "./logout-button";
-import { LoginModal } from "./login-modal";
+"use client";
+
+import { User } from "@supabase/supabase-js";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
+import { LogoutButton } from "./logout-button";
 
-export async function AuthButton() {
-  const user = await getUser();
+interface UserMenuProps {
+  user: User;
+}
 
-  return user ? (
+export function UserMenu({ user }: UserMenuProps) {
+  return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -47,8 +49,5 @@ export async function AuthButton() {
         <LogoutButton />
       </DropdownMenuContent>
     </DropdownMenu>
-  ) : (
-    <LoginModal />
   );
 }
-
