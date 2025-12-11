@@ -94,3 +94,21 @@
 .maplibregl-popup-anchor-right .maplibregl-popup-tip {
   border-left-color: var(--popover) !important;
 }
+
+/* Dark Mode Navigation Controls */
+.dark .maplibregl-ctrl-group {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.dark .maplibregl-ctrl-group > button {
+  border-top: 1px solid var(--border) !important;
+}
+
+.dark .maplibregl-ctrl-group > button:hover {
+  background-color: var(--accent) !important;
+}
+
+.dark .maplibregl-ctrl-icon {
+  filter: invert(1) grayscale(1) brightness(2);
+}

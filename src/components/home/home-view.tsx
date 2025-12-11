@@ -265,7 +265,7 @@ export function HomeView({ sites, user }: HomeViewProps) {
 
       {/* Top Right Auth Button */}
       <div className="absolute top-4 right-4 z-10 flex gap-2 items-center">
-        <div className="bg-background/90 backdrop-blur-sm rounded-full shadow-md border border-border">
+        <div className="bg-background backdrop-blur-sm rounded-full shadow-md border border-border">
           <ThemeSwitcher />
         </div>
         {mounted && (user ? <UserMenu user={user} /> : <LoginModal />)}
