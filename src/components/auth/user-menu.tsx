@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
+import Link from "next/link";
 import { LogoutButton } from "./logout-button";
 
 interface UserMenuProps {
@@ -46,8 +47,16 @@ export function UserMenu({ user }: UserMenuProps) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <Link href="/profile">
+          <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
+            <User className="h-4 w-4" />
+            <span>Profile</span>
+          </DropdownMenuItem>
+        </Link>
+        <DropdownMenuSeparator />
         <LogoutButton />
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
+
