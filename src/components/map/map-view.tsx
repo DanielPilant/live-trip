@@ -1,14 +1,33 @@
 "use client";
 
-import Map, { Marker, Popup, NavigationControl, MapRef, Source, Layer } from "react-map-gl/maplibre";
+import Map, {
+  Marker,
+  Popup,
+  NavigationControl,
+  MapRef,
+  Source,
+  Layer,
+} from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Site, Report } from "@/lib/types";
 import { ReportForm } from "@/components/report/report-form";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { lightStyle, darkStyle } from "./map-styles";
+
+// Initialize RTL Text Plugin
+try {
+  if (maplibregl.getRTLTextPluginStatus() === "unavailable") {
+    maplibregl.setRTLTextPlugin(
+      "/mapbox-gl-rtl-text.min.js",
+      true // Lazy load
+    );
+  }
+} catch (error) {
+  console.error("Failed to initialize RTL plugin:", error);
+}
 
 interface MapViewProps {
   sites?: Site[];
@@ -16,6 +35,7 @@ interface MapViewProps {
   reports?: Report[];
   flyToLocation?: { lat: number; lng: number } | null;
   onSiteSelect?: (site: Site | null) => void;
+  language?: string;
 }
 
 const CROWD_LEVEL_COLORS = {
@@ -38,29 +58,108 @@ export default function MapView({
   reports = [],
   flyToLocation = null,
   onSiteSelect,
+  language = "en",
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null);
   const { resolvedTheme } = useTheme();
   const [userReport, setUserReport] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  
+
   // View state for the map
   const [viewState, setViewState] = useState(DEFAULT_CENTER);
 
   const isDark = resolvedTheme === "dark";
   const mapStyle = isDark ? darkStyle : lightStyle;
 
+  const updateMapLanguage = useCallback(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current.getMap();
+
+    const style = map.getStyle();
+    if (style && style.layers) {
+      style.layers.forEach((layer: any) => {
+        if (
+          layer.type === "symbol" &&
+          layer.layout &&
+          layer.layout["text-field"]
+        ) {
+          const isLine = layer.layout["symbol-placement"] === "line";
+          const separator = isLine ? "   " : "\n";
+
+          // Try selected language, then English
+          const primary = [
+            "coalesce",
+            ["get", `name:${language}`],
+            ["get", "name:en"],
+          ];
+          const local = ["get", "name"];
+
+          map.setLayoutProperty(layer.id, "text-field", [
+            "case",
+            // Show dual if primary exists AND is different from local
+            ["all", ["!=", primary, null], ["!=", primary, local]],
+            [
+              "format",
+              primary,
+              { "font-scale": 1.0 },
+              separator,
+              {},
+              local,
+              {
+                "font-scale": 1.1,
+                "text-font": [
+                  "literal",
+                  ["DIN Offc Pro Italic", "Arial Unicode MS Regular"],
+                ],
+              },
+            ],
+            // Fallback: show primary (if exists) or local
+            ["coalesce", primary, local],
+          ]);
+        }
+      });
+    }
+  }, [language]);
+
+  // Update map language when it changes
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current.getMap();
+
+    if (map.isStyleLoaded()) {
+      updateMapLanguage();
+    } else {
+      map.once("style.load", updateMapLanguage);
+    }
+  }, [language, mapStyle, updateMapLanguage]);
+
+  const onMapLoad = useCallback(
+    (e: any) => {
+      updateMapLanguage();
+    },
+    [updateMapLanguage]
+  );
+
   const sitesGeoJSON = useMemo(() => {
     const features = sites
-      .filter((site) => site.polygon && site.polygon.elements && site.polygon.elements.length > 0)
+      .filter(
+        (site) =>
+          site.polygon &&
+          site.polygon.elements &&
+          site.polygon.elements.length > 0
+      )
       .map((site) => {
         const element = site.polygon.elements[0];
         if (!element.geometry) return null;
 
         const coordinates = element.geometry.map((p: any) => [p.lon, p.lat]);
         // Ensure the polygon is closed
-        if (coordinates.length > 0 && (coordinates[0][0] !== coordinates[coordinates.length - 1][0] || coordinates[0][1] !== coordinates[coordinates.length - 1][1])) {
-            coordinates.push(coordinates[0]);
+        if (
+          coordinates.length > 0 &&
+          (coordinates[0][0] !== coordinates[coordinates.length - 1][0] ||
+            coordinates[0][1] !== coordinates[coordinates.length - 1][1])
+        ) {
+          coordinates.push(coordinates[0]);
         }
 
         return {
@@ -158,7 +257,8 @@ export default function MapView({
       <Map
         ref={mapRef}
         {...viewState}
-        onMove={evt => setViewState(evt.viewState)}
+        onLoad={onMapLoad}
+        onMove={(evt) => setViewState(evt.viewState)}
         style={{ width: "100%", height: "100%" }}
         mapStyle={mapStyle}
         mapLib={maplibregl}
@@ -188,22 +288,26 @@ export default function MapView({
         <NavigationControl position="bottom-right" />
 
         {sites.map((site) => (
-            <Marker
+          <Marker
             key={site.id}
             latitude={site.location.lat}
             longitude={site.location.lng}
             anchor="bottom"
-            onClick={(e: { originalEvent: MouseEvent }) => handleMarkerClick(e, site)}
-            >
+            onClick={(e: { originalEvent: MouseEvent }) =>
+              handleMarkerClick(e, site)
+            }
+          >
             <div className="cursor-pointer transform transition-transform hover:scale-110">
               <img
-              src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png"
-              alt={site.name}
-              className="w-[25px] h-[41px]"
-              style={{ filter: isDark ? "invert(1) hue-rotate(180deg)" : "none" }}
+                src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png"
+                alt={site.name}
+                className="w-[25px] h-[41px]"
+                style={{
+                  filter: isDark ? "invert(1) hue-rotate(180deg)" : "none",
+                }}
               />
             </div>
-            </Marker>
+          </Marker>
         ))}
 
         {selectedSite && (
@@ -222,7 +326,7 @@ export default function MapView({
               <p className="text-sm text-muted-foreground mb-3">
                 {selectedSite.description}
               </p>
-              
+
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium">Crowd Level:</span>
                 <span
@@ -243,9 +347,7 @@ export default function MapView({
               {/* Recent Reports List */}
               {reports.length > 0 && (
                 <div className="mt-3 pt-2 border-t border-border mb-3">
-                  <p className="text-xs font-semibold mb-1">
-                    Recent Reports:
-                  </p>
+                  <p className="text-xs font-semibold mb-1">Recent Reports:</p>
                   <div className="space-y-1 max-h-24 overflow-y-auto">
                     {reports.map((report) => (
                       <div
