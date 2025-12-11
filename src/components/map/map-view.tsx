@@ -281,12 +281,12 @@ export default function MapView({
                 <h2 className="text-lg font-bold flex-1">
                   {selectedSite.name}
                 </h2>
-                <button
+                {/* <button
                   onClick={() => setShowForm(false)}
                   className="text-muted-foreground hover:text-foreground text-2xl leading-none"
                 >
                   ×
-                </button>
+                </button> */}
               </div>
               <ReportForm
                 siteId={selectedSite.id}

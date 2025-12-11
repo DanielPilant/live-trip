@@ -11,6 +11,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "LiveTrip",
   description: "Real-time trip planning and sharing",
+  icons: {
+    icon: [
+      { url: "/icon.svg", media: "(prefers-color-scheme: light)" },
+      { url: "/icon_dark.svg", media: "(prefers-color-scheme: dark)" },
+    ],
+  },
 };
 
 const geistSans = Geist({
