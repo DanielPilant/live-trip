@@ -1,9 +1,11 @@
 "use client";
 
 import { User } from "@supabase/supabase-js";
+import { User as UserIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -49,7 +51,7 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuSeparator />
         <Link href="/profile">
           <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
-            <User className="h-4 w-4" />
+            <UserIcon className="h-4 w-4" />
             <span>Profile</span>
           </DropdownMenuItem>
         </Link>
