@@ -5,6 +5,14 @@ export interface Location {
 
 export type CrowdLevel = "low" | "moderate" | "high" | "critical";
 
+export interface WeatherCondition {
+  temperature: number;
+  condition: string;
+  humidity: number;
+  windSpeed: number;
+  icon: string;
+}
+
 export interface Site {
   id: string;
   name: string;
@@ -12,6 +20,7 @@ export interface Site {
   location: Location;
   crowd_level: CrowdLevel;
   polygon?: any;
+  weather?: WeatherCondition;
   created_at: string;
 }
 

@@ -4,7 +4,7 @@ import Map, {
   Marker,
   Popup,
   NavigationControl,
-  MapRef,
+  MapRef, GeolocateControl,
   Source,
   Layer,
 } from "react-map-gl/maplibre";
@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { lightStyle, darkStyle } from "./map-styles";
+import { getWeatherForLocation } from "@/lib/services/weather-service";
 
 // Initialize RTL Text Plugin
 try {
@@ -64,9 +65,10 @@ export default function MapView({
   const { resolvedTheme } = useTheme();
   const [userReport, setUserReport] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [sitesWithWeather, setSitesWithWeather] = useState<Site[]>([]);
 
-  // View state for the map
   const [viewState, setViewState] = useState(DEFAULT_CENTER);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const isDark = resolvedTheme === "dark";
   const mapStyle = isDark ? darkStyle : lightStyle;
@@ -184,6 +186,47 @@ export default function MapView({
 
   console.log("MapView rendering, style:", mapStyle);
 
+  // Get user's current location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log("Geolocation error:", error);
+          // Fall back to default location if geolocation fails
+        }
+      );
+    }
+  }, []);
+
+  // Fetch weather data for all sites
+  useEffect(() => {
+    const fetchWeatherForSites = async () => {
+      const sitesData = await Promise.all(
+        sites.map(async (site) => {
+          const weather = await getWeatherForLocation(
+            site.location.lat,
+            site.location.lng
+          );
+          return {
+            ...site,
+            weather: weather || undefined,
+          };
+        })
+      );
+      setSitesWithWeather(sitesData);
+    };
+
+    if (sites.length > 0) {
+      fetchWeatherForSites();
+    }
+  }, [sites]);
+
   // Fetch user's report when selectedSite changes
   useEffect(() => {
     async function fetchUserReport() {
@@ -252,6 +295,16 @@ export default function MapView({
     setShowForm(false);
   };
 
+  const handleCenterMap = () => {
+    if (mapRef.current && userLocation) {
+      mapRef.current.flyTo({
+        center: [userLocation.lng, userLocation.lat],
+        zoom: 16,
+        duration: 1000,
+      });
+    }
+  };
+
   return (
     <div className="w-full h-full relative bg-muted">
       <Map
@@ -286,8 +339,9 @@ export default function MapView({
         </Source>
 
         <NavigationControl position="bottom-right" />
+        <GeolocateControl position="bottom-right" />
 
-        {sites.map((site) => (
+        {sitesWithWeather.map((site) => (
           <Marker
             key={site.id}
             latitude={site.location.lat}
@@ -343,6 +397,29 @@ export default function MapView({
                   {selectedSite.crowd_level}
                 </span>
               </div>
+
+              {/* Weather Condition */}
+              {selectedSite.weather && (
+                <div className="bg-muted p-2 rounded mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Weather:</span>
+                    <span className="text-xs">{selectedSite.weather.temperature}°C</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={selectedSite.weather.icon}
+                      alt={selectedSite.weather.condition}
+                      className="w-6 h-6"
+                    />
+                    <div>
+                      <p className="text-xs font-medium">{selectedSite.weather.condition}</p>
+                      <p className="text-xs text-muted-foreground">
+                        💧 {selectedSite.weather.humidity}% | 💨 {selectedSite.weather.windSpeed} km/h
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Recent Reports List */}
               {reports.length > 0 && (

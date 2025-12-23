@@ -44,10 +44,6 @@ const LANGUAGES = [
   { code: "en", name: "English" },
   { code: "he", name: "Hebrew" },
   { code: "fr", name: "French" },
-  { code: "es", name: "Spanish" },
-  { code: "ar", name: "Arabic" },
-  { code: "ru", name: "Russian" },
-  { code: "zh", name: "Chinese" },
 ];
 
 export function HomeView({ sites, user }: HomeViewProps) {
@@ -305,41 +301,48 @@ export function HomeView({ sites, user }: HomeViewProps) {
 
       {/* Bottom Left Logo Button */}
       <div className="absolute bottom-8 left-4 z-10">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-background shadow-md hover:bg-accent transition-colors border border-border">
-              <Logo className="h-8 w-8" />
-              <span className="font-bold text-lg text-foreground">
-                Live Trip
-              </span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>Settings</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <Globe className="mr-2 h-4 w-4" />
-                <span>Language</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  {LANGUAGES.map((lang) => (
-                    <DropdownMenuItem
-                      key={lang.code}
-                      onClick={() => setLanguage(lang.code)}
-                      className={`cursor-pointer ${
-                        language === lang.code ? "bg-accent" : ""
-                      }`}
-                    >
-                      {lang.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {mounted ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-background shadow-md hover:bg-accent transition-colors border border-border">
+                <Logo className="h-8 w-8" />
+                <span className="font-bold text-lg text-foreground">
+                  Live Trip
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Settings</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Globe className="mr-2 h-4 w-4" />
+                  <span>Language</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    {LANGUAGES.map((lang) => (
+                      <DropdownMenuItem
+                        key={lang.code}
+                        onClick={() => setLanguage(lang.code)}
+                        className={`cursor-pointer ${
+                          language === lang.code ? "bg-accent" : ""
+                        }`}
+                      >
+                        {lang.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-background shadow-md hover:bg-accent transition-colors border border-border">
+            <Logo className="h-8 w-8" />
+            <span className="font-bold text-lg text-foreground">Live Trip</span>
+          </button>
+        )}
       </div>
     </main>
   );

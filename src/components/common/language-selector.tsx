@@ -18,10 +18,6 @@ const LANGUAGES = [
   { code: "en", name: "English" },
   { code: "he", name: "Hebrew" },
   { code: "fr", name: "French" },
-  { code: "es", name: "Spanish" },
-  { code: "ar", name: "Arabic" },
-  { code: "ru", name: "Russian" },
-  { code: "zh", name: "Chinese" },
 ];
 
 export function LanguageSelector({
