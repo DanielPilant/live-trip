@@ -4,7 +4,8 @@ import Map, {
   Marker,
   Popup,
   NavigationControl,
-  MapRef, GeolocateControl,
+  MapRef,
+  GeolocateControl,
   Source,
   Layer,
 } from "react-map-gl/maplibre";
@@ -68,7 +69,10 @@ export default function MapView({
   const [sitesWithWeather, setSitesWithWeather] = useState<Site[]>([]);
 
   const [viewState, setViewState] = useState(DEFAULT_CENTER);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   const isDark = resolvedTheme === "dark";
   const mapStyle = isDark ? darkStyle : lightStyle;
@@ -144,34 +148,135 @@ export default function MapView({
 
   const sitesGeoJSON = useMemo(() => {
     const features = sites
-      .filter(
-        (site) =>
-          site.polygon &&
-          site.polygon.elements &&
-          site.polygon.elements.length > 0
-      )
       .map((site) => {
-        const element = site.polygon.elements[0];
-        if (!element.geometry) return null;
+        const element = site.polygon;
+        if (!element) return null;
 
-        const coordinates = element.geometry.map((p: any) => [p.lon, p.lat]);
-        // Ensure the polygon is closed
-        if (
-          coordinates.length > 0 &&
-          (coordinates[0][0] !== coordinates[coordinates.length - 1][0] ||
-            coordinates[0][1] !== coordinates[coordinates.length - 1][1])
-        ) {
-          coordinates.push(coordinates[0]);
+        let geometry = null;
+
+        // Case 1: Relation (Multipolygon)
+        if (element.type === "relation" && element.members) {
+          const outerWays = element.members.filter(
+            (m: any) => m.role === "outer" && m.type === "way" && m.geometry
+          );
+
+          if (outerWays.length > 0) {
+            // Convert to segments: array of points [lon, lat]
+            const segments = outerWays.map((w: any) =>
+              w.geometry.map((p: any) => [p.lon, p.lat])
+            );
+
+            // Stitch segments
+            const rings = [];
+            while (segments.length > 0) {
+              let currentRing = segments.pop(); // Start with the last one
+              let changed = true;
+
+              while (changed) {
+                changed = false;
+                const head = currentRing[0];
+                const tail = currentRing[currentRing.length - 1];
+
+                // Try to find a segment that connects to head or tail
+                for (let i = 0; i < segments.length; i++) {
+                  const seg = segments[i];
+                  const segHead = seg[0];
+                  const segTail = seg[seg.length - 1];
+
+                  // Connect to tail
+                  if (
+                    Math.abs(segHead[0] - tail[0]) < 1e-6 &&
+                    Math.abs(segHead[1] - tail[1]) < 1e-6
+                  ) {
+                    currentRing = currentRing.concat(seg.slice(1));
+                    segments.splice(i, 1);
+                    changed = true;
+                    break;
+                  }
+                  // Connect to tail (reversed)
+                  else if (
+                    Math.abs(segTail[0] - tail[0]) < 1e-6 &&
+                    Math.abs(segTail[1] - tail[1]) < 1e-6
+                  ) {
+                    currentRing = currentRing.concat(seg.reverse().slice(1));
+                    segments.splice(i, 1);
+                    changed = true;
+                    break;
+                  }
+                  // Connect to head
+                  else if (
+                    Math.abs(segTail[0] - head[0]) < 1e-6 &&
+                    Math.abs(segTail[1] - head[1]) < 1e-6
+                  ) {
+                    currentRing = seg.slice(0, -1).concat(currentRing);
+                    segments.splice(i, 1);
+                    changed = true;
+                    break;
+                  }
+                  // Connect to head (reversed)
+                  else if (
+                    Math.abs(segHead[0] - head[0]) < 1e-6 &&
+                    Math.abs(segHead[1] - head[1]) < 1e-6
+                  ) {
+                    currentRing = seg
+                      .reverse()
+                      .slice(0, -1)
+                      .concat(currentRing);
+                    segments.splice(i, 1);
+                    changed = true;
+                    break;
+                  }
+                }
+              }
+
+              // Close the ring if needed
+              if (currentRing.length > 0) {
+                const first = currentRing[0];
+                const last = currentRing[currentRing.length - 1];
+                if (first[0] !== last[0] || first[1] !== last[1]) {
+                  currentRing.push(first);
+                }
+                rings.push(currentRing);
+              }
+            }
+
+            if (rings.length === 1) {
+              geometry = {
+                type: "Polygon",
+                coordinates: [rings[0]],
+              };
+            } else if (rings.length > 1) {
+              geometry = {
+                type: "MultiPolygon",
+                coordinates: rings.map((r) => [r]),
+              };
+            }
+          }
         }
+        // Case 2: Simple Way (existing logic)
+        else if (element.geometry && Array.isArray(element.geometry)) {
+          const coordinates = element.geometry.map((p: any) => [p.lon, p.lat]);
+          if (
+            coordinates.length > 0 &&
+            (coordinates[0][0] !== coordinates[coordinates.length - 1][0] ||
+              coordinates[0][1] !== coordinates[coordinates.length - 1][1])
+          ) {
+            coordinates.push(coordinates[0]);
+          }
+          geometry = {
+            type: "Polygon",
+            coordinates: [coordinates],
+          };
+        }
+
+        if (!geometry) return null;
 
         return {
           type: "Feature",
-          geometry: {
-            type: "Polygon",
-            coordinates: [coordinates],
-          },
+          geometry,
           properties: {
             id: site.id,
+            name: element.tags?.name || site.name,
             color: CROWD_LEVEL_COLORS[site.crowd_level] || "#888888",
           },
         };
@@ -403,7 +508,9 @@ export default function MapView({
                 <div className="bg-muted p-2 rounded mb-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium">Weather:</span>
-                    <span className="text-xs">{selectedSite.weather.temperature}°C</span>
+                    <span className="text-xs">
+                      {selectedSite.weather.temperature}°C
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <img
@@ -412,9 +519,12 @@ export default function MapView({
                       className="w-6 h-6"
                     />
                     <div>
-                      <p className="text-xs font-medium">{selectedSite.weather.condition}</p>
+                      <p className="text-xs font-medium">
+                        {selectedSite.weather.condition}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        💧 {selectedSite.weather.humidity}% | 💨 {selectedSite.weather.windSpeed} km/h
+                        💧 {selectedSite.weather.humidity}% | 💨{" "}
+                        {selectedSite.weather.windSpeed} km/h
                       </p>
                     </div>
                   </div>
