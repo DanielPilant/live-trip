@@ -47,7 +47,9 @@ async function updateSites() {
     }
 
     console.log(
-      `\nProcessing Site (${sites.indexOf(site) + 1}/${sites.length}): ${site.id} (${lat}, ${lng})`
+      `\nProcessing Site (${sites.indexOf(site) + 1}/${sites.length}): ${
+        site.id
+      } (${lat}, ${lng})`
     );
 
     try {
