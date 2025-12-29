@@ -132,7 +132,10 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
       return;
     }
     setSelectedSite(site);
-    setFlyToLocation(null);
+    setFlyToLocation({
+      lat: site.location.lat,
+      lng: site.location.lng,
+    });
     setInputValue(site.name);
     setOpen(false);
     inputRef.current?.blur();
