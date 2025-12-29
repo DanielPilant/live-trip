@@ -172,92 +172,92 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
 
       {/* Search Bar */}
       {mounted && (
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-md">
-        <div className="relative">
-          <Command
-            shouldFilter={false}
-            className="rounded-2xl border border-border bg-background/95 backdrop-blur-sm shadow-lg transition-all duration-200 focus-within:shadow-xl focus-within:ring-2 focus-within:ring-ring overflow-visible"
-          >
-            <div className="relative">
-              <CommandInput
-                ref={inputRef}
-                placeholder="Search for a site..."
-                className="h-12 text-base text-foreground placeholder:text-muted-foreground pr-10"
-                value={inputValue}
-                onFocus={() => setOpen(true)}
-                onBlur={() => setTimeout(() => setOpen(false), 200)}
-                onValueChange={handleSearch}
-                suppressHydrationWarning
-              />
-              {isLoading && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              )}
-            </div>
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-md">
+          <div className="relative">
+            <Command
+              shouldFilter={false}
+              className="rounded-2xl border border-border bg-background/95 backdrop-blur-sm shadow-lg transition-all duration-200 focus-within:shadow-xl focus-within:ring-2 focus-within:ring-ring overflow-visible"
+            >
+              <div className="relative">
+                <CommandInput
+                  ref={inputRef}
+                  placeholder="Search for a site..."
+                  className="h-12 text-base text-foreground placeholder:text-muted-foreground pr-10"
+                  value={inputValue}
+                  onFocus={() => setOpen(true)}
+                  onBlur={() => setTimeout(() => setOpen(false), 200)}
+                  onValueChange={handleSearch}
+                  suppressHydrationWarning
+                />
+                {isLoading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
 
-            {open &&
-              inputValue.length > 0 &&
-              (searchResults.length > 0 || mapboxResults.length > 0) && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-popover rounded-xl shadow-2xl border border-border overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <CommandList className="max-h-[300px] overflow-y-auto py-2">
-                    <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
-                      No results found.
-                    </CommandEmpty>
+              {open &&
+                inputValue.length > 0 &&
+                (searchResults.length > 0 || mapboxResults.length > 0) && (
+                  <div className="absolute top-full left-0 w-full mt-2 bg-popover rounded-xl shadow-2xl border border-border overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <CommandList className="max-h-[300px] overflow-y-auto py-2">
+                      <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
+                        No results found.
+                      </CommandEmpty>
 
-                    {searchResults.length > 0 && (
-                      <CommandGroup heading="Live Trip Sites">
-                        {searchResults.map((site) => (
-                          <CommandItem
-                            key={site.id}
-                            value={site.name}
-                            onSelect={() => handleSelectSite(site)}
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            className="flex flex-col items-start px-4 py-3 mx-2 my-1 rounded-lg cursor-pointer transition-colors hover:bg-accent aria-selected:bg-accent"
-                          >
-                            <span className="font-semibold text-foreground text-sm">
-                              {site.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground truncate w-full mt-0.5">
-                              {site.description}
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    )}
+                      {searchResults.length > 0 && (
+                        <CommandGroup heading="Live Trip Sites">
+                          {searchResults.map((site) => (
+                            <CommandItem
+                              key={site.id}
+                              value={site.name}
+                              onSelect={() => handleSelectSite(site)}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              className="flex flex-col items-start px-4 py-3 mx-2 my-1 rounded-lg cursor-pointer transition-colors hover:bg-accent aria-selected:bg-accent"
+                            >
+                              <span className="font-semibold text-foreground text-sm">
+                                {site.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground truncate w-full mt-0.5">
+                                {site.description}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
 
-                    {mapboxResults.length > 0 && (
-                      <CommandGroup heading="Global Locations">
-                        {mapboxResults.map((place) => (
-                          <CommandItem
-                            key={place.id}
-                            value={place.place_name}
-                            onSelect={() => handleSelectLocation(place)}
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            className="flex flex-col items-start px-4 py-3 mx-2 my-1 rounded-lg cursor-pointer transition-colors hover:bg-accent aria-selected:bg-accent"
-                          >
-                            <span className="font-semibold text-foreground text-sm">
-                              {place.text}
-                            </span>
-                            <span className="text-xs text-muted-foreground truncate w-full mt-0.5">
-                              {place.place_name}
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    )}
-                  </CommandList>
-                </div>
-              )}
-          </Command>
+                      {mapboxResults.length > 0 && (
+                        <CommandGroup heading="Global Locations">
+                          {mapboxResults.map((place) => (
+                            <CommandItem
+                              key={place.id}
+                              value={place.place_name}
+                              onSelect={() => handleSelectLocation(place)}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              className="flex flex-col items-start px-4 py-3 mx-2 my-1 rounded-lg cursor-pointer transition-colors hover:bg-accent aria-selected:bg-accent"
+                            >
+                              <span className="font-semibold text-foreground text-sm">
+                                {place.text}
+                              </span>
+                              <span className="text-xs text-muted-foreground truncate w-full mt-0.5">
+                                {place.place_name}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </div>
+                )}
+            </Command>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Top Right Auth Button */}
