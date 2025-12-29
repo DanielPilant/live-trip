@@ -49,3 +49,25 @@ export interface MapboxResult {
   place_name: string;
   center: [number, number]; // [lng, lat]
 }
+
+// Unified Search Result Types (Discriminated Union)
+export type SearchResultItem =
+  | {
+      type: "site";
+      data: Site;
+    }
+  | {
+      type: "location";
+      data: MapboxResult;
+    };
+
+export interface SearchResults {
+  sites: Site[];
+  locations: MapboxResult[];
+  combined: SearchResultItem[];
+}
+
+export interface SearchError {
+  source: "sites" | "locations";
+  error: Error;
+}

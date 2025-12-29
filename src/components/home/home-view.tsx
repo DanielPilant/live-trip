@@ -1,13 +1,10 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Site, Report, MapboxResult } from "@/lib/types";
+import { Site, Report } from "@/lib/types";
 import MapView from "@/components/map";
-import {
-  searchSitesAction,
-  getReportsAction,
-  searchMapboxAction,
-} from "@/app/actions/site";
+import { getReportsAction } from "@/app/actions/site";
+import { useSearchEngine } from "@/hooks/use-search-engine";
 import {
   Command,
   CommandEmpty,
@@ -33,20 +30,12 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
     lng: number;
   } | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
-
-  // Search State
-  const [open, setOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<Site[]>([]);
-  const [mapboxResults, setMapboxResults] = useState<MapboxResult[]>([]);
-  const [inputValue, setInputValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Refs for debouncing and race condition handling
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
-  const latestSearchId = useRef<number>(0);
+  // Input ref for managing focus
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Initialize geolocation on mount
   useEffect(() => {
     setMounted(true);
     if ("geolocation" in navigator) {
@@ -59,7 +48,6 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
         },
         (error) => {
           if (error.code === 1) {
-            // User denied permission - this is expected behavior
             console.log("User denied location access");
             return;
           }
@@ -74,92 +62,76 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
     }
   }, []);
 
-  const handleSearch = useCallback(
-    (value: string) => {
-      setInputValue(value);
-      setOpen(true); // Ensure dropdown opens when typing
-
-      // Clear existing timeout
-      if (debounceTimeout.current) {
-        clearTimeout(debounceTimeout.current);
-      }
-
-      // Reset state if input is empty
-      if (!value.trim()) {
-        setSearchResults([]);
-        setMapboxResults([]);
-        setIsLoading(false);
-        return;
-      }
-
-      // Prevent re-searching the currently selected item
-      if (selectedSite && value === selectedSite.name) {
-        return;
-      }
-
-      setIsLoading(true);
-      const searchId = ++latestSearchId.current;
-
-      debounceTimeout.current = setTimeout(async () => {
-        try {
-          // Run searches in parallel
-          const [dbResults, mapResults] = await Promise.all([
-            searchSitesAction(value),
-            searchMapboxAction(value),
-          ]);
-
-          // Only update state if this is still the latest search
-          if (searchId === latestSearchId.current) {
-            setSearchResults(dbResults);
-            setMapboxResults(mapResults);
-            setIsLoading(false);
-          }
-        } catch (error) {
-          console.error("Search failed:", error);
-          if (searchId === latestSearchId.current) {
-            setIsLoading(false);
-          }
-        }
-      }, 300);
-    },
-    [selectedSite]
-  );
-
-  const handleSelectSite = async (site: Site | null) => {
-    if (!site) {
-      setSelectedSite(null);
-      setReports([]);
-      return;
-    }
+  /**
+   * Handle Database Site Selection
+   * Updates both selected site and triggers map fly-to
+   */
+  const handleSiteSelection = useCallback(async (site: Site) => {
     setSelectedSite(site);
     setFlyToLocation({
       lat: site.location.lat,
       lng: site.location.lng,
     });
-    setInputValue(site.name);
-    setOpen(false);
     inputRef.current?.blur();
-    setSearchResults([]);
-    setMapboxResults([]);
 
-    // Fetch reports
+    // Fetch reports for the selected site
+    const siteReports = await getReportsAction(site.id);
+    setReports(siteReports);
+  }, []);
+
+  /**
+   * Handle Mapbox Location Selection
+   * Triggers map fly-to without setting a selected site
+   */
+  const handleLocationSelection = useCallback(
+    (location: {
+      text: string;
+      place_name: string;
+      center: [number, number];
+    }) => {
+      setSelectedSite(null);
+      setReports([]);
+      setFlyToLocation({
+        lat: location.center[1],
+        lng: location.center[0],
+      });
+      inputRef.current?.blur();
+    },
+    []
+  );
+
+  // Initialize search engine hook with handlers
+  const search = useSearchEngine({
+    debounceMs: 300,
+    minSearchLength: 1,
+    onSiteSelect: handleSiteSelection,
+    onLocationSelect: handleLocationSelection,
+  });
+
+  /**
+   * Handle map-based site selection (clicking markers)
+   */
+  const handleMapSiteSelect = async (site: Site | null) => {
+    if (!site) {
+      setSelectedSite(null);
+      setReports([]);
+      return;
+    }
+
+    setSelectedSite(site);
+    setFlyToLocation({
+      lat: site.location.lat,
+      lng: site.location.lng,
+    });
+
     const siteReports = await getReportsAction(site.id);
     setReports(siteReports);
   };
 
-  const handleSelectLocation = (place: MapboxResult) => {
-    setSelectedSite(null);
-    setReports([]);
-    setFlyToLocation({
-      lat: place.center[1],
-      lng: place.center[0],
-    });
-    setInputValue(place.text);
-    setOpen(false);
-    inputRef.current?.blur();
-    setSearchResults([]);
-    setMapboxResults([]);
-  };
+  const hasResults =
+    search.state.results.sites.length > 0 ||
+    search.state.results.locations.length > 0;
+
   return (
     <main className="relative h-screen w-screen overflow-hidden">
       {/* Map Background */}
@@ -169,7 +141,7 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
           selectedSite={selectedSite}
           reports={reports}
           flyToLocation={flyToLocation}
-          onSiteSelect={handleSelectSite}
+          onSiteSelect={handleMapSiteSelect}
         />
       </div>
 
@@ -186,35 +158,35 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
                   ref={inputRef}
                   placeholder="Search for a site..."
                   className="h-12 text-base text-foreground placeholder:text-muted-foreground pr-10"
-                  value={inputValue}
-                  onFocus={() => setOpen(true)}
-                  onBlur={() => setTimeout(() => setOpen(false), 200)}
-                  onValueChange={handleSearch}
+                  value={search.state.query}
+                  onFocus={search.openDropdown}
+                  onBlur={() => setTimeout(search.closeDropdown, 200)}
+                  onValueChange={search.performSearch}
                   suppressHydrationWarning
                 />
-                {isLoading && (
+                {search.state.isSearching && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
                 )}
               </div>
 
-              {open &&
-                inputValue.length > 0 &&
-                (searchResults.length > 0 || mapboxResults.length > 0) && (
+              {search.state.isOpen &&
+                search.state.query.length > 0 &&
+                hasResults && (
                   <div className="absolute top-full left-0 w-full mt-2 bg-popover rounded-xl shadow-2xl border border-border overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
                     <CommandList className="max-h-[300px] overflow-y-auto py-2">
                       <CommandEmpty className="py-6 text-center text-sm text-muted-foreground">
                         No results found.
                       </CommandEmpty>
 
-                      {searchResults.length > 0 && (
+                      {search.state.results.sites.length > 0 && (
                         <CommandGroup heading="Live Trip Sites">
-                          {searchResults.map((site) => (
+                          {search.state.results.sites.map((site) => (
                             <CommandItem
                               key={site.id}
                               value={site.name}
-                              onSelect={() => handleSelectSite(site)}
+                              onSelect={() => search.selectSite(site)}
                               onMouseDown={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -232,13 +204,13 @@ export function HomeView({ sites, authButton }: HomeViewProps) {
                         </CommandGroup>
                       )}
 
-                      {mapboxResults.length > 0 && (
+                      {search.state.results.locations.length > 0 && (
                         <CommandGroup heading="Global Locations">
-                          {mapboxResults.map((place) => (
+                          {search.state.results.locations.map((place) => (
                             <CommandItem
                               key={place.id}
                               value={place.place_name}
-                              onSelect={() => handleSelectLocation(place)}
+                              onSelect={() => search.selectLocation(place)}
                               onMouseDown={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
