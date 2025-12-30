@@ -1,6 +1,6 @@
 "use client";
 
-import Map, {
+import ReactMap, {
   Marker,
   Popup,
   NavigationControl,
@@ -18,6 +18,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { lightStyle, darkStyle } from "./map-styles";
 import { getWeatherForLocation } from "@/lib/services/weather-service";
+import { getSitesPolygonsByIdsAction } from "@/app/actions/site";
 
 // Initialize RTL Text Plugin
 try {
@@ -66,7 +67,8 @@ export default function MapView({
   const { resolvedTheme } = useTheme();
   const [userReport, setUserReport] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [sitesWithWeather, setSitesWithWeather] = useState<Site[]>([]);
+  const [localSites, setLocalSites] = useState<Site[]>(sites);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   const [viewState, setViewState] = useState(DEFAULT_CENTER);
   const [userLocation, setUserLocation] = useState<{
@@ -141,13 +143,14 @@ export default function MapView({
 
   const onMapLoad = useCallback(
     (e: any) => {
+      setMapLoaded(true);
       updateMapLanguage();
     },
     [updateMapLanguage]
   );
 
   const sitesGeoJSON = useMemo(() => {
-    const features = sites
+    const features = localSites
       .map((site) => {
         const element = site.polygon;
         if (!element) return null;
@@ -287,7 +290,7 @@ export default function MapView({
       type: "FeatureCollection",
       features,
     };
-  }, [sites]);
+  }, [localSites]);
 
   console.log("MapView rendering, style:", mapStyle);
 
@@ -309,28 +312,86 @@ export default function MapView({
     }
   }, []);
 
-  // Fetch weather data for all sites
+  // Fetch additional data (weather)
   useEffect(() => {
-    const fetchWeatherForSites = async () => {
-      const sitesData = await Promise.all(
-        sites.map(async (site) => {
-          const weather = await getWeatherForLocation(
-            site.location.lat,
-            site.location.lng
-          );
-          return {
-            ...site,
-            weather: weather || undefined,
-          };
-        })
-      );
-      setSitesWithWeather(sitesData);
+    // Reset to basic sites when prop changes
+    setLocalSites(sites);
+
+    const fetchWeatherData = async () => {
+      try {
+        // Fetch Weather
+        const sitesWithData = await Promise.all(
+          sites.map(async (site) => {
+            const weather = await getWeatherForLocation(
+              site.location.lat,
+              site.location.lng
+            );
+
+            return {
+              ...site,
+              weather: weather || undefined,
+            };
+          })
+        );
+        setLocalSites(sitesWithData);
+      } catch (error) {
+        console.error("Error fetching weather data:", error);
+      }
     };
 
     if (sites.length > 0) {
-      fetchWeatherForSites();
+      fetchWeatherData();
     }
   }, [sites]);
+
+  const handleMapMoveEnd = useCallback(
+    async (evt: any) => {
+      const zoom = evt.viewState.zoom;
+      if (zoom < 13) return; // Only fetch polygons if zoomed in enough
+
+      const bounds = evt.target.getBounds();
+      if (!bounds) return;
+
+      // Find sites visible in the current viewport that don't have a polygon yet
+      const visibleSitesWithoutPolygon = localSites.filter((site) => {
+        if (site.polygon) return false; // Already has polygon
+
+        const { lat, lng } = site.location;
+        return bounds.contains([lng, lat]);
+      });
+
+      if (visibleSitesWithoutPolygon.length === 0) return;
+
+      const idsToFetch = visibleSitesWithoutPolygon.map((s) => s.id);
+      console.log(
+        `Fetching polygons for ${idsToFetch.length} visible sites...`
+      );
+
+      try {
+        const polygonsData = await getSitesPolygonsByIdsAction(idsToFetch);
+        if (!polygonsData || polygonsData.length === 0) return;
+
+        const polygonsMap = new Map(
+          polygonsData.map((p: any) => [p.id, p.polygon])
+        );
+
+        setLocalSites((prevSites) =>
+          prevSites.map((site) => {
+            if (polygonsMap.has(site.id)) {
+              return {
+                ...site,
+                polygon: polygonsMap.get(site.id),
+              };
+            }
+            return site;
+          })
+        );
+      } catch (error) {
+        console.error("Error fetching visible polygons:", error);
+      }
+    },
+    [localSites]
+  );
 
   // Fetch user's report when selectedSite changes
   useEffect(() => {
@@ -412,41 +473,44 @@ export default function MapView({
 
   return (
     <div className="w-full h-full relative bg-muted">
-      <Map
+      <ReactMap
         ref={mapRef}
         {...viewState}
         onLoad={onMapLoad}
         onMove={(evt) => setViewState(evt.viewState)}
+        onMoveEnd={handleMapMoveEnd}
         style={{ width: "100%", height: "100%" }}
         mapStyle={mapStyle}
         mapLib={maplibregl}
         attributionControl={false}
       >
-        <Source id="sites-polygons" type="geojson" data={sitesGeoJSON as any}>
-          <Layer
-            id="sites-fill"
-            type="fill"
-            minzoom={13}
-            paint={{
-              "fill-color": ["get", "color"],
-              "fill-opacity": 0.3,
-            }}
-          />
-          <Layer
-            id="sites-outline"
-            type="line"
-            minzoom={15}
-            paint={{
-              "line-color": ["get", "color"],
-              "line-width": 2,
-            }}
-          />
-        </Source>
+        {mapLoaded && (
+          <Source id="sites-polygons" type="geojson" data={sitesGeoJSON as any}>
+            <Layer
+              id="sites-fill"
+              type="fill"
+              minzoom={13}
+              paint={{
+                "fill-color": ["get", "color"],
+                "fill-opacity": 0.3,
+              }}
+            />
+            <Layer
+              id="sites-outline"
+              type="line"
+              minzoom={15}
+              paint={{
+                "line-color": ["get", "color"],
+                "line-width": 2,
+              }}
+            />
+          </Source>
+        )}
 
         <NavigationControl position="bottom-right" />
         <GeolocateControl position="bottom-right" />
 
-        {sitesWithWeather.map((site) => (
+        {localSites.map((site) => (
           <Marker
             key={site.id}
             latitude={site.location.lat}
@@ -559,7 +623,7 @@ export default function MapView({
             </div>
           </Popup>
         )}
-      </Map>
+      </ReactMap>
 
       {/* Modal Form Overlay */}
       {selectedSite && showForm && (

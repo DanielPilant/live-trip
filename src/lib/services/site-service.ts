@@ -6,7 +6,7 @@ export async function getSites() {
 
   const { data, error } = await supabase
     .from("site_crowd_levels")
-    .select("*")
+    .select("id, name, description, location, crowd_level, created_at")
     .order("name");
 
   if (error) {
@@ -15,6 +15,38 @@ export async function getSites() {
   }
 
   return data as Site[];
+}
+
+export async function getSitesPolygons(page = 0, pageSize = 20) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("sites")
+    .select("id, polygon")
+    .range(page * pageSize, (page + 1) * pageSize - 1);
+
+  if (error) {
+    console.error("Error fetching site polygons:", error);
+    return [];
+  }
+
+  return data;
+}
+
+export async function getSitesPolygonsByIds(ids: string[]) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("sites")
+    .select("id, polygon")
+    .in("id", ids);
+
+  if (error) {
+    console.error("Error fetching site polygons by IDs:", error);
+    return [];
+  }
+
+  return data;
 }
 
 export async function getSiteById(id: string) {
@@ -72,7 +104,7 @@ export async function searchSites(query: string) {
 
   const { data, error } = await supabase
     .from("sites")
-    .select("*")
+    .select("id, name, description, location, crowd_level, created_at")
     .ilike("name", `${query}%`)
     .order("name")
     .limit(10);

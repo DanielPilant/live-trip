@@ -93,7 +93,9 @@ async function fetchOverpassPolygon(lat, lng, retries = 5) {
     is_in(${lat},${lng})->.containingAreas;
     (
       area.containingAreas[amenity];
-      area.containingAreas[landuse]; 
+      area.containingAreas[landuse];
+      area.containingAreas[place];
+      area.containingAreas[leisure];
     )->.potentialAreas;
     (
       area.potentialAreas[admin_level!~".*"];
