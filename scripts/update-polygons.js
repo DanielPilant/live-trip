@@ -86,7 +86,7 @@ async function updateSites() {
   console.log("\n🏁 Script finished.");
 }
 
-async function fetchOverpassPolygon(lat, lng, retries = 3) {
+async function fetchOverpassPolygon(lat, lng, retries = 5) {
   // Your exact query, dynamically injecting lat/lng
   const query = `
     [out:json][timeout:25];
