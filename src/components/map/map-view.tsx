@@ -24,7 +24,7 @@ import { getSitesPolygonsByIdsAction } from "@/app/actions/site";
 try {
   if (maplibregl.getRTLTextPluginStatus() === "unavailable") {
     maplibregl.setRTLTextPlugin(
-      "/mapbox-gl-rtl-text.min.js",
+      "https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.2.3/mapbox-gl-rtl-text.min.js",
       true // Lazy load
     );
   }
@@ -115,10 +115,6 @@ export default function MapView({
               local,
               {
                 "font-scale": 1.1,
-                "text-font": [
-                  "literal",
-                  ["DIN Offc Pro Italic", "Arial Unicode MS Regular"],
-                ],
               },
             ],
             // Fallback: show primary (if exists) or local
